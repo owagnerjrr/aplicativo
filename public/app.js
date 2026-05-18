@@ -1,7 +1,7 @@
 const stateUrl = "/api/state";
 let currentState = null;
 let toastTimer = null;
-let demoMode = false;
+let demoMode = window.location.hostname.endsWith("github.io");
 
 const demoState = {
   projector: { power: false, input: "HDMI 1", lamp: "Fria" },
