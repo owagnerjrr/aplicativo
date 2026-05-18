@@ -2,6 +2,7 @@ const http = require("http");
 const fs = require("fs");
 const path = require("path");
 
+const HOST = process.env.HOST || "0.0.0.0";
 const PORT = Number(process.env.PORT || 5184);
 const PUBLIC_DIR = path.join(__dirname, "public");
 
@@ -184,6 +185,7 @@ const server = http.createServer(async (req, res) => {
   }
 });
 
-server.listen(PORT, "127.0.0.1", () => {
+server.listen(PORT, HOST, () => {
   console.log(`Sala Control rodando em http://127.0.0.1:${PORT}`);
+  console.log(`No celular, use http://IP-DO-COMPUTADOR:${PORT}`);
 });
