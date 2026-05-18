@@ -16,6 +16,16 @@ Depois abra no computador:
 http://127.0.0.1:5184
 ```
 
+## Versao publicada
+
+GitHub Pages:
+
+```txt
+https://owagnerjrr.github.io/aplicativo/
+```
+
+No GitHub Pages o app roda em modo demo, sem o servidor local. As cenas e os botoes funcionam visualmente, mas nao enviam comandos reais para equipamentos.
+
 ## Como testar no celular
 
 O celular e o computador precisam estar no mesmo Wi-Fi.

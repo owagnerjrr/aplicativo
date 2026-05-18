@@ -1,8 +1,58 @@
 const stateUrl = "/api/state";
 let currentState = null;
 let toastTimer = null;
+let demoMode = false;
+
+const demoState = {
+  projector: { power: false, input: "HDMI 1", lamp: "Fria" },
+  ac: { power: false, temperature: 22, mode: "Auto", fan: "Medio" },
+  audio: { power: false, volume: 35, muted: false },
+  lights: { power: true, brightness: 65 },
+  screen: { position: "Recolhida" },
+  lastScene: "Standby",
+  activity: []
+};
+
+const demoScenes = {
+  presentation: [
+    ["projector", { power: true, input: "HDMI 1" }],
+    ["ac", { power: true, temperature: 22, mode: "Frio" }],
+    ["audio", { power: true, volume: 42, muted: false }],
+    ["lights", { power: true, brightness: 35 }],
+    ["screen", { position: "Baixada" }]
+  ],
+  meeting: [
+    ["projector", { power: true, input: "Wireless" }],
+    ["ac", { power: true, temperature: 23, mode: "Auto" }],
+    ["audio", { power: true, volume: 28, muted: false }],
+    ["lights", { power: true, brightness: 70 }],
+    ["screen", { position: "Baixada" }]
+  ],
+  focus: [
+    ["projector", { power: false }],
+    ["ac", { power: true, temperature: 21, mode: "Frio" }],
+    ["audio", { power: false }],
+    ["lights", { power: true, brightness: 90 }],
+    ["screen", { position: "Recolhida" }]
+  ],
+  shutdown: [
+    ["projector", { power: false }],
+    ["ac", { power: false }],
+    ["audio", { power: false, muted: false }],
+    ["lights", { power: false, brightness: 0 }],
+    ["screen", { position: "Recolhida" }]
+  ]
+};
+
+const demoSceneNames = {
+  presentation: "Apresentacao",
+  meeting: "Reuniao",
+  focus: "Foco",
+  shutdown: "Desligar tudo"
+};
 
 const formatPower = (value) => (value ? "Ligado" : "Desligado");
+const clone = (value) => JSON.parse(JSON.stringify(value));
 
 function showToast(message) {
   const toast = document.querySelector("#toast");
@@ -13,16 +63,71 @@ function showToast(message) {
 }
 
 async function request(url, options = {}) {
-  const response = await fetch(url, {
-    headers: { "content-type": "application/json" },
-    ...options
-  });
-
-  const data = await response.json();
-  if (!response.ok || data.ok === false) {
-    throw new Error(data.error || "Falha ao enviar comando");
+  if (demoMode) {
+    return demoRequest(url, options);
   }
-  return data;
+
+  try {
+    const response = await fetch(url, {
+      headers: { "content-type": "application/json" },
+      ...options
+    });
+
+    const data = await response.json();
+    if (!response.ok || data.ok === false) {
+      throw new Error(data.error || "Falha ao enviar comando");
+    }
+    return data;
+  } catch (error) {
+    demoMode = true;
+    showToast("Modo demo ativo");
+    return demoRequest(url, options);
+  }
+}
+
+async function demoRequest(url, options = {}) {
+  if (url === stateUrl) {
+    return clone(demoState);
+  }
+
+  if (url.startsWith("/api/device/")) {
+    const device = url.split("/").pop();
+    const patch = options.body ? JSON.parse(options.body) : {};
+
+    if (!demoState[device]) {
+      throw new Error("Dispositivo nao encontrado");
+    }
+
+    Object.assign(demoState[device], patch);
+    addDemoActivity(`Comando enviado para ${device}`, patch);
+    return { ok: true, state: clone(demoState) };
+  }
+
+  if (url.startsWith("/api/scene/")) {
+    const scene = url.split("/").pop();
+    const steps = demoScenes[scene];
+
+    if (!steps) {
+      throw new Error("Cena nao encontrada");
+    }
+
+    steps.forEach(([device, patch]) => Object.assign(demoState[device], patch));
+    demoState.lastScene = demoSceneNames[scene];
+    addDemoActivity(`Cena "${demoSceneNames[scene]}" executada`, { scene });
+    return { ok: true, state: clone(demoState) };
+  }
+
+  throw new Error("Rota nao encontrada");
+}
+
+function addDemoActivity(message, details = {}) {
+  demoState.activity.unshift({
+    id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+    time: new Date().toISOString(),
+    message,
+    details
+  });
+  demoState.activity = demoState.activity.slice(0, 20);
 }
 
 async function loadState() {
