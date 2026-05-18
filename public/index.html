@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sala Control</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <aside class="sidebar">
+        <div>
+          <p class="eyebrow">Sala 01</p>
+          <h1>Sala Control</h1>
+        </div>
+
+        <section class="status-panel" aria-label="Resumo da sala">
+          <div>
+            <span class="label">Cena ativa</span>
+            <strong id="last-scene">Standby</strong>
+          </div>
+          <div>
+            <span class="label">Status</span>
+            <strong id="room-status">Carregando</strong>
+          </div>
+        </section>
+
+        <section class="scene-grid" aria-label="Cenas">
+          <button class="scene-button primary" data-scene="presentation">
+            <span>Apresentacao</span>
+            <small>Projetor, som, tela e ar</small>
+          </button>
+          <button class="scene-button" data-scene="meeting">
+            <span>Reuniao</span>
+            <small>Wireless e luz media</small>
+          </button>
+          <button class="scene-button" data-scene="focus">
+            <span>Foco</span>
+            <small>Luz forte sem midia</small>
+          </button>
+          <button class="scene-button danger" data-scene="shutdown">
+            <span>Desligar tudo</span>
+            <small>Encerra a sala</small>
+          </button>
+        </section>
+      </aside>
+
+      <section class="content">
+        <header class="topbar">
+          <div>
+            <p class="eyebrow">Controle central</p>
+            <h2>Equipamentos</h2>
+          </div>
+          <button id="refresh" class="icon-button" title="Atualizar estado" aria-label="Atualizar estado">↻</button>
+        </header>
+
+        <section class="device-grid">
+          <article class="device-card" data-device="projector">
+            <div class="card-header">
+              <div>
+                <span class="device-icon">▣</span>
+                <h3>Data show</h3>
+              </div>
+              <button class="toggle" data-field="power">Ligar</button>
+            </div>
+            <label>
+              Entrada
+              <select data-field="input">
+                <option>HDMI 1</option>
+                <option>HDMI 2</option>
+                <option>Wireless</option>
+                <option>USB-C</option>
+              </select>
+            </label>
+            <p class="device-state" data-summary></p>
+          </article>
+
+          <article class="device-card" data-device="ac">
+            <div class="card-header">
+              <div>
+                <span class="device-icon">❄</span>
+                <h3>Ar condicionado</h3>
+              </div>
+              <button class="toggle" data-field="power">Ligar</button>
+            </div>
+            <label>
+              Temperatura
+              <input type="range" min="18" max="28" step="1" data-field="temperature" />
+              <strong data-value="temperature">22°C</strong>
+            </label>
+            <label>
+              Modo
+              <select data-field="mode">
+                <option>Auto</option>
+                <option>Frio</option>
+                <option>Ventilar</option>
+                <option>Secar</option>
+              </select>
+            </label>
+            <p class="device-state" data-summary></p>
+          </article>
+
+          <article class="device-card" data-device="audio">
+            <div class="card-header">
+              <div>
+                <span class="device-icon">♪</span>
+                <h3>Som</h3>
+              </div>
+              <button class="toggle" data-field="power">Ligar</button>
+            </div>
+            <label>
+              Volume
+              <input type="range" min="0" max="100" step="1" data-field="volume" />
+              <strong data-value="volume">35%</strong>
+            </label>
+            <button class="secondary" data-action="mute">Alternar mudo</button>
+            <p class="device-state" data-summary></p>
+          </article>
+
+          <article class="device-card" data-device="lights">
+            <div class="card-header">
+              <div>
+                <span class="device-icon">●</span>
+                <h3>Luzes</h3>
+              </div>
+              <button class="toggle" data-field="power">Ligar</button>
+            </div>
+            <label>
+              Intensidade
+              <input type="range" min="0" max="100" step="5" data-field="brightness" />
+              <strong data-value="brightness">65%</strong>
+            </label>
+            <p class="device-state" data-summary></p>
+          </article>
+
+          <article class="device-card" data-device="screen">
+            <div class="card-header">
+              <div>
+                <span class="device-icon">▤</span>
+                <h3>Tela</h3>
+              </div>
+            </div>
+            <div class="segmented">
+              <button data-position="Baixada">Baixar</button>
+              <button data-position="Parada">Parar</button>
+              <button data-position="Recolhida">Recolher</button>
+            </div>
+            <p class="device-state" data-summary></p>
+          </article>
+
+          <article class="log-card">
+            <div class="card-header">
+              <div>
+                <span class="device-icon">≡</span>
+                <h3>Atividade</h3>
+              </div>
+            </div>
+            <ol id="activity-log"></ol>
+          </article>
+        </section>
+      </section>
+    </main>
+
+    <div id="toast" role="status" aria-live="polite"></div>
+    <script src="/app.js"></script>
+  </body>
+</html>
