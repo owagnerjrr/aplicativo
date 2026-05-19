@@ -2,6 +2,7 @@ const stateUrl = "/api/state";
 let currentState = null;
 let toastTimer = null;
 let demoMode = window.location.hostname.endsWith("github.io");
+let addedDevices = loadAddedDevices();
 
 const demoState = {
   projector: { power: false, input: "HDMI 1", lamp: "Fria" },
@@ -143,8 +144,32 @@ const techNames = {
   nfc: "NFC/QR"
 };
 
+const controlProfiles = {
+  ip: { action: "Abrir controle", control: "Entrada" },
+  bluetooth: { action: "Conectar", control: "Volume" },
+  ir: { action: "Aprender controle", control: "Power" },
+  rf: { action: "Parear RF", control: "Acionamento" },
+  zigbee: { action: "Parear hub", control: "Intensidade" },
+  zwave: { action: "Parear hub", control: "Liga/desliga" },
+  cec: { action: "Detectar HDMI", control: "Fonte" },
+  serial: { action: "Configurar porta", control: "Comando" },
+  nfc: { action: "Ler etiqueta", control: "Cadastro" }
+};
+
 const formatPower = (value) => (value ? "Ligado" : "Desligado");
 const clone = (value) => JSON.parse(JSON.stringify(value));
+
+function loadAddedDevices() {
+  try {
+    return JSON.parse(localStorage.getItem("salaControlDevices") || "[]");
+  } catch {
+    return [];
+  }
+}
+
+function saveAddedDevices() {
+  localStorage.setItem("salaControlDevices", JSON.stringify(addedDevices));
+}
 
 function showToast(message) {
   const toast = document.querySelector("#toast");
@@ -266,6 +291,7 @@ function render(state) {
   );
 
   renderDevice("screen", state.screen, (device) => device.position);
+  renderAddedDevices();
   renderActivity(state.activity);
 }
 
@@ -315,6 +341,46 @@ function renderActivity(activity) {
         second: "2-digit"
       }).format(new Date(item.time));
       return `<li><strong>${time}</strong> · ${item.message}</li>`;
+    })
+    .join("");
+}
+
+function renderAddedDevices() {
+  const container = document.querySelector("#added-devices");
+  if (!container) return;
+
+  container.innerHTML = addedDevices
+    .map((device) => {
+      const profile = controlProfiles[device.tech] || controlProfiles.ip;
+      const valueLabel = device.tech === "bluetooth" ? `${device.level}%` : device.level;
+      const range =
+        device.tech === "bluetooth" || device.tech === "zigbee"
+          ? `
+            <label>
+              ${profile.control}
+              <input type="range" min="0" max="100" step="5" data-added-range="${device.id}" value="${device.level}" />
+              <strong>${valueLabel}</strong>
+            </label>
+          `
+          : "";
+
+      return `
+        <article class="device-card discovered-card" data-added-card="${device.id}">
+          <div class="card-header">
+            <div>
+              <span class="device-icon">+</span>
+              <h3>${device.name}</h3>
+            </div>
+            <button class="toggle ${device.power ? "is-on" : ""}" data-added-power="${device.id}">
+              ${device.power ? "Desligar" : "Ligar"}
+            </button>
+          </div>
+          <span class="tech-pill">${techNames[device.tech]}</span>
+          ${range}
+          <button class="secondary" data-added-action="${device.id}">${profile.action}</button>
+          <p class="device-state">${formatPower(device.power)} - ${device.type} - ${device.status}</p>
+        </article>
+      `;
     })
     .join("");
 }
@@ -419,7 +485,9 @@ function renderDiscoverResults(items = discoverCatalog) {
             <p>${item.detail}</p>
           </div>
           <div class="result-actions">
-            <button type="button" data-add-device="${item.name}">Adicionar</button>
+            <button type="button" data-add-device="${item.name}">
+              ${addedDevices.some((device) => device.name === item.name) ? "Adicionado" : "Adicionar"}
+            </button>
           </div>
         </article>
       `
@@ -460,10 +528,71 @@ discoverResults.addEventListener("click", (event) => {
 
   const item = discoverCatalog.find((candidate) => candidate.name === button.dataset.addDevice);
   if (!item) return;
+  if (addedDevices.some((device) => device.name === item.name)) {
+    showToast("Esse equipamento ja foi adicionado");
+    return;
+  }
 
+  addedDevices.push({
+    ...item,
+    id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+    power: false,
+    level: item.tech === "bluetooth" ? 35 : 65
+  });
+  saveAddedDevices();
   addDemoActivity(`Equipamento adicionado: ${item.name}`, { tech: item.tech });
+  renderAddedDevices();
+  scanDevices();
   renderActivity(demoState.activity);
   showToast("Equipamento adicionado");
 });
 
-loadState().catch((error) => showToast(error.message));
+document.querySelector("#added-devices").addEventListener("click", (event) => {
+  const powerButton = event.target.closest("[data-added-power]");
+  const actionButton = event.target.closest("[data-added-action]");
+
+  if (powerButton) {
+    const device = addedDevices.find((item) => item.id === powerButton.dataset.addedPower);
+    if (!device) return;
+    device.power = !device.power;
+    saveAddedDevices();
+    addDemoActivity(`Comando enviado para ${device.name}`, { power: device.power });
+    renderAddedDevices();
+    renderActivity(demoState.activity);
+    showToast("Comando enviado");
+  }
+
+  if (actionButton) {
+    const device = addedDevices.find((item) => item.id === actionButton.dataset.addedAction);
+    if (!device) return;
+    addDemoActivity(`Configuracao aberta: ${device.name}`, { tech: device.tech });
+    renderActivity(demoState.activity);
+    showToast(controlProfiles[device.tech].action);
+  }
+});
+
+document.querySelector("#added-devices").addEventListener("change", (event) => {
+  const slider = event.target.closest("[data-added-range]");
+  if (!slider) return;
+  const device = addedDevices.find((item) => item.id === slider.dataset.addedRange);
+  if (!device) return;
+  device.level = Number(slider.value);
+  saveAddedDevices();
+  renderAddedDevices();
+});
+
+loadState()
+  .then(() => {
+    if (!localStorage.getItem("salaControlSeen")) {
+      localStorage.setItem("salaControlSeen", "true");
+      renderDiscoverResults();
+      setTimeout(() => {
+        if (typeof discoverDialog.showModal === "function") {
+          discoverDialog.showModal();
+        } else {
+          discoverDialog.setAttribute("open", "");
+        }
+      }, 350);
+    }
+  })
+  .catch((error) => showToast(error.message));
