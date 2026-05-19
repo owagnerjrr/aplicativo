@@ -58,88 +58,99 @@ const discoverCatalog = [
     type: "Data show",
     group: "video",
     tech: "ir",
-    status: "Precisa de IR no celular ou hub BroadLink/ESP32",
-    detail: "Liga, desliga, troca entrada e controla menu por infravermelho."
+    status: "Precisa de hub",
+    detail: "Liga, desliga, troca entrada e controla menu por infravermelho.",
+    connection: "hub"
   },
   {
     name: "Ar-condicionado split",
     type: "Climatizacao",
     group: "clima",
     tech: "ir",
-    status: "Precisa de emissor infravermelho",
-    detail: "Comandos de temperatura, modo, velocidade e liga/desliga."
+    status: "Precisa de hub",
+    detail: "Comandos de temperatura, modo, velocidade e liga/desliga.",
+    connection: "hub"
   },
   {
     name: "Receiver de som",
     type: "Audio",
     group: "audio",
     tech: "ir",
-    status: "Controle remoto IR ou RS-232 em modelos profissionais",
-    detail: "Volume, mute, entrada e power."
+    status: "Precisa de hub",
+    detail: "Volume, mute, entrada e power.",
+    connection: "hub"
   },
   {
     name: "TV ou monitor smart",
     type: "Video",
     group: "video",
     tech: "ip",
-    status: "Busca por rede local",
-    detail: "Pode usar IP, HDMI-CEC ou infravermelho conforme o modelo."
+    status: "Conexao direta",
+    detail: "Pode usar IP, HDMI-CEC ou infravermelho conforme o modelo.",
+    connection: "direct"
   },
   {
     name: "Caixa Bluetooth",
     type: "Audio",
     group: "audio",
     tech: "bluetooth",
-    status: "Pareamento Bluetooth/BLE",
-    detail: "O navegador pode exigir permissao ou app nativo."
+    status: "Pedir permissao",
+    detail: "O navegador pode exigir permissao ou app nativo.",
+    connection: "permission"
   },
   {
     name: "Tela de projecao RF",
     type: "Tela",
     group: "tela",
     tech: "rf",
-    status: "Precisa de hub RF 315/433 MHz",
-    detail: "Baixar, parar e recolher por radiofrequencia."
+    status: "Precisa de hub",
+    detail: "Baixar, parar e recolher por radiofrequencia.",
+    connection: "hub"
   },
   {
     name: "Modulo de luz Zigbee",
     type: "Iluminacao",
     group: "luz",
     tech: "zigbee",
-    status: "Precisa de coordenador Zigbee",
-    detail: "Liga, desliga, brilho e cenas."
+    status: "Precisa de hub",
+    detail: "Liga, desliga, brilho e cenas.",
+    connection: "hub"
   },
   {
     name: "Modulo Z-Wave",
     type: "Automacao",
     group: "luz",
     tech: "zwave",
-    status: "Precisa de controlador Z-Wave",
-    detail: "Reles, sensores e cargas eletricas compativeis."
+    status: "Precisa de hub",
+    detail: "Reles, sensores e cargas eletricas compativeis.",
+    connection: "hub"
   },
   {
     name: "Switch HDMI-CEC",
     type: "Video",
     group: "video",
     tech: "cec",
-    status: "Precisa de interface HDMI-CEC",
-    detail: "Troca fonte e envia comandos pelo cabo HDMI."
+    status: "Precisa de hub",
+    detail: "Troca fonte e envia comandos pelo cabo HDMI.",
+    connection: "hub"
   },
   {
     name: "Projetor profissional RS-232",
     type: "Data show",
     group: "video",
     tech: "serial",
-    status: "Precisa de adaptador USB/serial ou gateway IP",
-    detail: "Controle confiavel por comandos seriais."
+    status: "Precisa de hub",
+    detail: "Controle confiavel por comandos seriais.",
+    connection: "hub"
   },
   {
     name: "Etiqueta NFC / QR",
     type: "Cadastro manual",
     group: "controle",
     tech: "nfc",
-    status: "Celular pode ler NFC ou camera",
-    detail: "Associa um equipamento fisico ao cadastro do app."
+    status: "Pedir permissao",
+    detail: "Associa um equipamento fisico ao cadastro do app.",
+    connection: "permission"
   }
 ];
 
@@ -478,6 +489,18 @@ const discoverScan = document.querySelector("#discover-scan");
 const discoverQuery = document.querySelector("#discover-query");
 const discoverTech = document.querySelector("#discover-tech");
 const discoverResults = document.querySelector("#discover-results");
+const connectStatus = document.querySelector("#connect-status");
+
+function setConnectStatus(message, tone = "info") {
+  connectStatus.hidden = false;
+  connectStatus.textContent = message;
+  connectStatus.dataset.tone = tone;
+}
+
+function clearConnectStatus() {
+  connectStatus.hidden = true;
+  connectStatus.textContent = "";
+}
 
 function renderDiscoverResults(items = discoverCatalog) {
   if (!items.length) {
@@ -519,6 +542,7 @@ function scanDevices() {
 }
 
 discoverOpen.addEventListener("click", () => {
+  clearConnectStatus();
   renderDiscoverResults();
   if (typeof discoverDialog.showModal === "function") {
     discoverDialog.showModal();
@@ -528,19 +552,50 @@ discoverOpen.addEventListener("click", () => {
 });
 
 discoverScan.addEventListener("click", scanDevices);
-discoverQuery.addEventListener("input", scanDevices);
-discoverTech.addEventListener("change", scanDevices);
+discoverQuery.addEventListener("input", () => {
+  clearConnectStatus();
+  scanDevices();
+});
+discoverTech.addEventListener("change", () => {
+  clearConnectStatus();
+  scanDevices();
+});
 
-discoverResults.addEventListener("click", (event) => {
+async function connectDiscoveredDevice(item) {
+  setConnectStatus(`Conectando ${item.name}...`);
+  await new Promise((resolve) => setTimeout(resolve, 650));
+
+  if (item.connection === "hub") {
+    setConnectStatus("Este aparelho precisa de um hub para conectar.", "warn");
+    showToast("Precisa de hub");
+    return false;
+  }
+
+  if (item.connection === "permission") {
+    setConnectStatus("Permissao solicitada. Conectado em modo teste.", "ok");
+  } else {
+    setConnectStatus("Conectado com sucesso.", "ok");
+  }
+
+  return true;
+}
+
+discoverResults.addEventListener("click", async (event) => {
   const button = event.target.closest("[data-add-device]");
   if (!button) return;
 
   const item = discoverCatalog.find((candidate) => candidate.name === button.dataset.addDevice);
   if (!item) return;
   if (addedDevices.some((device) => device.name === item.name)) {
-    showToast("Esse equipamento ja foi adicionado");
+    setConnectStatus("Este equipamento ja esta conectado.", "ok");
     return;
   }
+
+  button.disabled = true;
+  const connected = await connectDiscoveredDevice(item);
+  button.disabled = false;
+
+  if (!connected) return;
 
   addedDevices.push({
     ...item,
@@ -553,7 +608,7 @@ discoverResults.addEventListener("click", (event) => {
   renderAddedDevices();
   scanDevices();
   renderActivity(demoState.activity);
-  showToast("Equipamento adicionado");
+  showToast("Conectado");
 });
 
 document.querySelector("#added-devices").addEventListener("click", (event) => {

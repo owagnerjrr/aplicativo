@@ -402,6 +402,28 @@ label strong {
   overflow: auto;
 }
 
+.connect-status {
+  min-height: 42px;
+  padding: 12px 14px;
+  border: 1px solid #dce7f3;
+  border-radius: 8px;
+  background: #f6f9fc;
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.connect-status[data-tone="ok"] {
+  border-color: rgba(19, 138, 91, 0.3);
+  background: #e8f7f0;
+  color: var(--green);
+}
+
+.connect-status[data-tone="warn"] {
+  border-color: rgba(184, 121, 17, 0.35);
+  background: #fff7e8;
+  color: var(--amber);
+}
+
 .result-card {
   display: grid;
   grid-template-columns: 1fr auto;
