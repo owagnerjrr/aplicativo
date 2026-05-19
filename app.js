@@ -485,6 +485,7 @@ document.querySelector("#refresh").addEventListener("click", async () => {
 
 const discoverDialog = document.querySelector("#discover-dialog");
 const discoverOpen = document.querySelector("#discover-open");
+const welcomeSearch = document.querySelector("#welcome-search");
 const discoverScan = document.querySelector("#discover-scan");
 const discoverQuery = document.querySelector("#discover-query");
 const discoverTech = document.querySelector("#discover-tech");
@@ -527,6 +528,16 @@ function renderDiscoverResults(items = discoverCatalog) {
     .join("");
 }
 
+function showSearching() {
+  clearConnectStatus();
+  discoverResults.innerHTML = `
+    <div class="searching-state">
+      <div class="spinner"></div>
+      <strong>Procurando equipamentos...</strong>
+    </div>
+  `;
+}
+
 function scanDevices() {
   const query = discoverQuery.value.trim().toLowerCase();
   const group = discoverTech.value;
@@ -541,15 +552,30 @@ function scanDevices() {
   showToast("Busca concluida");
 }
 
-discoverOpen.addEventListener("click", () => {
+function openDiscovery({ searching = true } = {}) {
   clearConnectStatus();
-  renderDiscoverResults();
+  discoverQuery.value = "";
+  discoverTech.value = "all";
+
   if (typeof discoverDialog.showModal === "function") {
     discoverDialog.showModal();
   } else {
     discoverDialog.setAttribute("open", "");
   }
+
+  if (searching) {
+    showSearching();
+    setTimeout(scanDevices, 750);
+  } else {
+    renderDiscoverResults();
+  }
+}
+
+discoverOpen.addEventListener("click", () => {
+  openDiscovery();
 });
+
+welcomeSearch.addEventListener("click", () => openDiscovery());
 
 discoverScan.addEventListener("click", scanDevices);
 discoverQuery.addEventListener("input", () => {
@@ -604,6 +630,8 @@ discoverResults.addEventListener("click", async (event) => {
     level: item.tech === "bluetooth" ? 35 : 65
   });
   saveAddedDevices();
+  document.body.classList.remove("is-first-run");
+  localStorage.setItem("salaControlSeen", "true");
   addDemoActivity(`Equipamento adicionado: ${item.name}`, { tech: item.tech });
   renderAddedDevices();
   scanDevices();
@@ -647,16 +675,8 @@ document.querySelector("#added-devices").addEventListener("change", (event) => {
 
 loadState()
   .then(() => {
-    if (!localStorage.getItem("salaControlSeen")) {
-      localStorage.setItem("salaControlSeen", "true");
-      renderDiscoverResults();
-      setTimeout(() => {
-        if (typeof discoverDialog.showModal === "function") {
-          discoverDialog.showModal();
-        } else {
-          discoverDialog.setAttribute("open", "");
-        }
-      }, 350);
+    if (!addedDevices.length && !localStorage.getItem("salaControlSeen")) {
+      document.body.classList.add("is-first-run");
     }
   })
   .catch((error) => showToast(error.message));

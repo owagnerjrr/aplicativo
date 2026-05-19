@@ -9,6 +9,14 @@
     <link rel="stylesheet" href="styles.css?v=5" />
   </head>
   <body>
+    <section id="welcome-screen" class="welcome-screen">
+      <div class="welcome-panel">
+        <p class="eyebrow">Sala Control</p>
+        <h1>Conecte seus equipamentos</h1>
+        <button id="welcome-search" class="action-button">Procurar equipamentos</button>
+      </div>
+    </section>
+
     <main class="app-shell">
       <aside class="sidebar">
         <div>
@@ -54,7 +62,7 @@
             <h2>Equipamentos</h2>
           </div>
           <div class="topbar-actions">
-            <button id="discover-open" class="action-button">Procurar equipamento</button>
+            <button id="discover-open" class="action-button">Procurar</button>
             <button id="refresh" class="icon-button" title="Atualizar estado" aria-label="Atualizar estado">R</button>
           </div>
         </header>
@@ -173,7 +181,7 @@
         <header class="discover-header">
           <div>
             <p class="eyebrow">Nova conexao</p>
-            <h2>Procurar equipamento</h2>
+            <h2>Equipamentos encontrados</h2>
           </div>
           <button class="icon-button" value="close" aria-label="Fechar">x</button>
         </header>

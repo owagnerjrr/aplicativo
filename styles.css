@@ -25,6 +25,10 @@ body {
   font-family: Inter, Segoe UI, Arial, sans-serif;
 }
 
+body.is-first-run .app-shell {
+  display: none;
+}
+
 button,
 input,
 select {
@@ -33,6 +37,38 @@ select {
 
 button {
   cursor: pointer;
+}
+
+.welcome-screen {
+  display: none;
+  min-height: 100vh;
+  place-items: center;
+  padding: 24px;
+  background: var(--bg);
+}
+
+body.is-first-run .welcome-screen {
+  display: grid;
+}
+
+.welcome-panel {
+  display: grid;
+  gap: 18px;
+  width: min(460px, 100%);
+  padding: 28px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.welcome-panel h1 {
+  color: var(--ink);
+  font-size: 2rem;
+}
+
+.welcome-panel .action-button {
+  width: 100%;
 }
 
 .app-shell {
@@ -422,6 +458,31 @@ label strong {
   border-color: rgba(184, 121, 17, 0.35);
   background: #fff7e8;
   color: var(--amber);
+}
+
+.searching-state {
+  display: grid;
+  place-items: center;
+  gap: 12px;
+  min-height: 180px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--muted);
+}
+
+.spinner {
+  width: 36px;
+  height: 36px;
+  border: 4px solid #dce4ee;
+  border-top-color: var(--blue);
+  border-radius: 50%;
+  animation: spin 800ms linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .result-card {
