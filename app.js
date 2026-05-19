@@ -53,20 +53,8 @@ const demoSceneNames = {
 };
 
 const discoveredDevices = [];
-const remoteCatalog = [
-  {
-    name: "Controle Hitachi",
-    type: "Ar condicionado",
-    group: "clima",
-    tech: "ir",
-    status: "Controle infravermelho",
-    detail: "Use o infravermelho do celular ou um hub compativel.",
-    connection: "hub",
-    source: "remote"
-  }
-];
-
 const techNames = {
+  wifi: "Wi-Fi",
   ip: "Wi-Fi/IP",
   bluetooth: "Bluetooth",
   ir: "Infravermelho",
@@ -79,6 +67,7 @@ const techNames = {
 };
 
 const controlProfiles = {
+  wifi: { action: "Abrir controle", control: "Comando" },
   ip: { action: "Abrir controle", control: "Entrada" },
   bluetooth: { action: "Conectar", control: "Volume" },
   ir: { action: "Aprender controle", control: "Power" },
@@ -310,7 +299,7 @@ function renderAddedDevices() {
               ${device.power ? "Desligar" : "Ligar"}
             </button>
           </div>
-          <span class="tech-pill">${techNames[device.tech]}</span>
+          <span class="tech-pill">${techNames[device.tech] || "Equipamento"}</span>
           ${range}
           <button class="secondary" data-added-action="${device.id}">${profile.action}</button>
           <p class="device-state">${formatPower(device.power)} - ${device.type} - ${device.status}</p>
@@ -401,7 +390,6 @@ const discoverOpen = document.querySelector("#discover-open");
 const welcomeSearch = document.querySelector("#welcome-search");
 const discoverScan = document.querySelector("#discover-scan");
 const discoverQuery = document.querySelector("#discover-query");
-const discoverTech = document.querySelector("#discover-tech");
 const discoverResults = document.querySelector("#discover-results");
 const connectStatus = document.querySelector("#connect-status");
 
@@ -421,7 +409,7 @@ function renderDiscoverResults(items = discoveredDevices) {
     discoverResults.innerHTML = `
       <div class="empty-state">
         <strong>Nenhum equipamento encontrado</strong>
-        <span>Pesquise pela marca para procurar controles compativeis.</span>
+        <span>Verifique se o equipamento esta ligado e proximo do celular.</span>
       </div>
     `;
     return;
@@ -433,7 +421,7 @@ function renderDiscoverResults(items = discoveredDevices) {
         <article class="result-card">
           <div>
             <h3>${item.name}</h3>
-            <p>${item.type}${item.source === "remote" ? " - controle compativel" : ""}</p>
+            <p>${item.type}</p>
           </div>
           <div class="result-actions">
             <button type="button" data-add-device="${item.id || item.name}">
@@ -515,7 +503,7 @@ async function detectBluetoothDevices() {
     await wait(5000);
     await bluetooth.stopLEScan();
   } catch (error) {
-    setConnectStatus("Nao foi possivel procurar por Bluetooth.", "warn");
+    return [];
   } finally {
     try {
       await bluetooth.stopLEScan?.();
@@ -574,40 +562,30 @@ async function detectDevices() {
   return [...found.values()];
 }
 
-function searchRemoteCatalog(query, group) {
-  if (!query) return [];
-
-  return remoteCatalog.filter((item) => {
-    const matchesGroup = group === "all" || item.group === group;
-    const text = `${item.name} ${item.type} ${item.detail}`.toLowerCase();
-    return matchesGroup && text.includes(query);
-  });
-}
-
 async function scanDevices() {
   const query = discoverQuery.value.trim().toLowerCase();
-  const group = discoverTech.value;
   showSearching();
 
   const detected = await detectDevices();
   discoveredDevices.splice(0, discoveredDevices.length, ...detected);
 
   const foundDevices = discoveredDevices.filter((item) => {
-    const matchesGroup = group === "all" || item.group === group;
     const text = `${item.name} ${item.type}`.toLowerCase();
-    return matchesGroup && (!query || text.includes(query));
+    const isAlreadyAdded = addedDevices.some((device) => device.sourceId === item.id || device.name === item.name);
+    return !isAlreadyAdded && (!query || text.includes(query));
   });
-  const compatibleRemotes = searchRemoteCatalog(query, group);
-  const results = [...foundDevices, ...compatibleRemotes];
 
-  renderDiscoverResults(results);
+  renderDiscoverResults(foundDevices);
+  setConnectStatus(
+    foundDevices.length ? `${foundDevices.length} equipamento(s) encontrado(s).` : "Nenhum equipamento encontrado.",
+    foundDevices.length ? "ok" : "warn"
+  );
   showToast("Busca concluida");
 }
 
 function openDiscovery({ searching = true } = {}) {
   clearConnectStatus();
   discoverQuery.value = "";
-  discoverTech.value = "all";
 
   if (typeof discoverDialog.showModal === "function") {
     discoverDialog.showModal();
@@ -630,10 +608,6 @@ welcomeSearch.addEventListener("click", () => openDiscovery());
 
 discoverScan.addEventListener("click", scanDevices);
 discoverQuery.addEventListener("input", () => {
-  clearConnectStatus();
-  scanDevices();
-});
-discoverTech.addEventListener("change", () => {
   clearConnectStatus();
   scanDevices();
 });
@@ -684,7 +658,7 @@ discoverResults.addEventListener("click", async (event) => {
   const button = event.target.closest("[data-add-device]");
   if (!button) return;
 
-  const item = [...discoveredDevices, ...remoteCatalog].find((candidate) => (candidate.id || candidate.name) === button.dataset.addDevice);
+  const item = discoveredDevices.find((candidate) => (candidate.id || candidate.name) === button.dataset.addDevice);
   if (!item) return;
   if (addedDevices.some((device) => device.name === item.name)) {
     setConnectStatus("Este equipamento ja esta conectado.", "ok");
@@ -699,6 +673,7 @@ discoverResults.addEventListener("click", async (event) => {
 
   addedDevices.push({
     ...item,
+    sourceId: item.id,
     id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
     power: false,
     level: item.tech === "bluetooth" ? 35 : 65
@@ -708,7 +683,7 @@ discoverResults.addEventListener("click", async (event) => {
   localStorage.setItem("salaControlSeen", "true");
   addDemoActivity(`Equipamento adicionado: ${item.name}`, { tech: item.tech });
   renderAddedDevices();
-  scanDevices();
+  renderDiscoverResults(discoveredDevices.filter((device) => device.id !== item.id));
   renderActivity(demoState.activity);
   showToast("Conectado");
 });
@@ -733,7 +708,7 @@ document.querySelector("#added-devices").addEventListener("click", (event) => {
     if (!device) return;
     addDemoActivity(`Configuracao aberta: ${device.name}`, { tech: device.tech });
     renderActivity(demoState.activity);
-    showToast(controlProfiles[device.tech].action);
+    showToast((controlProfiles[device.tech] || controlProfiles.ip).action);
   }
 });
 
