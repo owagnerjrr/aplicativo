@@ -51,6 +51,98 @@ const demoSceneNames = {
   shutdown: "Desligar tudo"
 };
 
+const discoverCatalog = [
+  {
+    name: "Projetor Epson antigo",
+    type: "Data show",
+    tech: "ir",
+    status: "Precisa de IR no celular ou hub BroadLink/ESP32",
+    detail: "Liga, desliga, troca entrada e controla menu por infravermelho."
+  },
+  {
+    name: "Ar-condicionado split",
+    type: "Climatizacao",
+    tech: "ir",
+    status: "Precisa de emissor infravermelho",
+    detail: "Comandos de temperatura, modo, velocidade e liga/desliga."
+  },
+  {
+    name: "Receiver de som",
+    type: "Audio",
+    tech: "ir",
+    status: "Controle remoto IR ou RS-232 em modelos profissionais",
+    detail: "Volume, mute, entrada e power."
+  },
+  {
+    name: "TV ou monitor smart",
+    type: "Video",
+    tech: "ip",
+    status: "Busca por rede local",
+    detail: "Pode usar IP, HDMI-CEC ou infravermelho conforme o modelo."
+  },
+  {
+    name: "Caixa Bluetooth",
+    type: "Audio",
+    tech: "bluetooth",
+    status: "Pareamento Bluetooth/BLE",
+    detail: "O navegador pode exigir permissao ou app nativo."
+  },
+  {
+    name: "Tela de projecao RF",
+    type: "Tela",
+    tech: "rf",
+    status: "Precisa de hub RF 315/433 MHz",
+    detail: "Baixar, parar e recolher por radiofrequencia."
+  },
+  {
+    name: "Modulo de luz Zigbee",
+    type: "Iluminacao",
+    tech: "zigbee",
+    status: "Precisa de coordenador Zigbee",
+    detail: "Liga, desliga, brilho e cenas."
+  },
+  {
+    name: "Modulo Z-Wave",
+    type: "Automacao",
+    tech: "zwave",
+    status: "Precisa de controlador Z-Wave",
+    detail: "Reles, sensores e cargas eletricas compativeis."
+  },
+  {
+    name: "Switch HDMI-CEC",
+    type: "Video",
+    tech: "cec",
+    status: "Precisa de interface HDMI-CEC",
+    detail: "Troca fonte e envia comandos pelo cabo HDMI."
+  },
+  {
+    name: "Projetor profissional RS-232",
+    type: "Data show",
+    tech: "serial",
+    status: "Precisa de adaptador USB/serial ou gateway IP",
+    detail: "Controle confiavel por comandos seriais."
+  },
+  {
+    name: "Etiqueta NFC / QR",
+    type: "Cadastro manual",
+    tech: "nfc",
+    status: "Celular pode ler NFC ou camera",
+    detail: "Associa um equipamento fisico ao cadastro do app."
+  }
+];
+
+const techNames = {
+  ip: "Wi-Fi/IP",
+  bluetooth: "Bluetooth",
+  ir: "Infravermelho",
+  rf: "RF",
+  zigbee: "Zigbee",
+  zwave: "Z-Wave",
+  cec: "HDMI-CEC",
+  serial: "Serial/RS-232",
+  nfc: "NFC/QR"
+};
+
 const formatPower = (value) => (value ? "Ligado" : "Desligado");
 const clone = (value) => JSON.parse(JSON.stringify(value));
 
@@ -301,6 +393,77 @@ document.querySelector("#refresh").addEventListener("click", async () => {
   } catch (error) {
     showToast(error.message);
   }
+});
+
+const discoverDialog = document.querySelector("#discover-dialog");
+const discoverOpen = document.querySelector("#discover-open");
+const discoverScan = document.querySelector("#discover-scan");
+const discoverQuery = document.querySelector("#discover-query");
+const discoverTech = document.querySelector("#discover-tech");
+const discoverResults = document.querySelector("#discover-results");
+
+function renderDiscoverResults(items = discoverCatalog) {
+  if (!items.length) {
+    discoverResults.innerHTML = '<p class="device-state">Nenhum equipamento encontrado.</p>';
+    return;
+  }
+
+  discoverResults.innerHTML = items
+    .map(
+      (item) => `
+        <article class="result-card">
+          <div>
+            <h3>${item.name}</h3>
+            <span class="tech-pill">${techNames[item.tech]}</span>
+            <p>${item.type} · ${item.status}</p>
+            <p>${item.detail}</p>
+          </div>
+          <div class="result-actions">
+            <button type="button" data-add-device="${item.name}">Adicionar</button>
+          </div>
+        </article>
+      `
+    )
+    .join("");
+}
+
+function scanDevices() {
+  const query = discoverQuery.value.trim().toLowerCase();
+  const tech = discoverTech.value;
+
+  const results = discoverCatalog.filter((item) => {
+    const matchesTech = tech === "all" || item.tech === tech;
+    const text = `${item.name} ${item.type} ${item.status} ${item.detail}`.toLowerCase();
+    return matchesTech && (!query || text.includes(query));
+  });
+
+  renderDiscoverResults(results);
+  showToast("Busca concluida");
+}
+
+discoverOpen.addEventListener("click", () => {
+  renderDiscoverResults();
+  if (typeof discoverDialog.showModal === "function") {
+    discoverDialog.showModal();
+  } else {
+    discoverDialog.setAttribute("open", "");
+  }
+});
+
+discoverScan.addEventListener("click", scanDevices);
+discoverQuery.addEventListener("input", scanDevices);
+discoverTech.addEventListener("change", scanDevices);
+
+discoverResults.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-add-device]");
+  if (!button) return;
+
+  const item = discoverCatalog.find((candidate) => candidate.name === button.dataset.addDevice);
+  if (!item) return;
+
+  addDemoActivity(`Equipamento adicionado: ${item.name}`, { tech: item.tech });
+  renderActivity(demoState.activity);
+  showToast("Equipamento adicionado");
 });
 
 loadState().catch((error) => showToast(error.message));

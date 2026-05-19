@@ -52,7 +52,10 @@
             <p class="eyebrow">Controle central</p>
             <h2>Equipamentos</h2>
           </div>
-          <button id="refresh" class="icon-button" title="Atualizar estado" aria-label="Atualizar estado">↻</button>
+          <div class="topbar-actions">
+            <button id="discover-open" class="action-button">Procurar equipamento</button>
+            <button id="refresh" class="icon-button" title="Atualizar estado" aria-label="Atualizar estado">R</button>
+          </div>
         </header>
 
         <section class="device-grid">
@@ -162,7 +165,56 @@
       </section>
     </main>
 
+    <dialog id="discover-dialog" class="discover-dialog">
+      <form method="dialog" class="discover-panel">
+        <header class="discover-header">
+          <div>
+            <p class="eyebrow">Nova conexao</p>
+            <h2>Procurar equipamento</h2>
+          </div>
+          <button class="icon-button" value="close" aria-label="Fechar">x</button>
+        </header>
+
+        <div class="discover-toolbar">
+          <label>
+            Nome, marca ou tipo
+            <input id="discover-query" type="search" placeholder="Ex: projetor, ar, som, Epson" />
+          </label>
+          <label>
+            Tecnologia
+            <select id="discover-tech">
+              <option value="all">Todas</option>
+              <option value="ip">Wi-Fi / rede IP</option>
+              <option value="bluetooth">Bluetooth / BLE</option>
+              <option value="ir">Infravermelho</option>
+              <option value="rf">RF 315/433 MHz</option>
+              <option value="zigbee">Zigbee</option>
+              <option value="zwave">Z-Wave</option>
+              <option value="cec">HDMI-CEC</option>
+              <option value="serial">USB / serial / RS-232</option>
+              <option value="nfc">NFC / QR / manual</option>
+            </select>
+          </label>
+          <button id="discover-scan" class="action-button" type="button">Buscar</button>
+        </div>
+
+        <section class="scan-options" aria-label="Canais de busca">
+          <span>Wi-Fi/IP</span>
+          <span>Bluetooth</span>
+          <span>IR</span>
+          <span>RF</span>
+          <span>Zigbee</span>
+          <span>Z-Wave</span>
+          <span>HDMI-CEC</span>
+          <span>Serial</span>
+          <span>NFC</span>
+        </section>
+
+        <section id="discover-results" class="discover-results" aria-live="polite"></section>
+      </form>
+    </dialog>
+
     <div id="toast" role="status" aria-live="polite"></div>
-    <script src="app.js?v=5"></script>
+    <script src="app.js?v=7"></script>
   </body>
 </html>
