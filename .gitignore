@@ -1,4 +1,5 @@
 node_modules/
+.gradle-dist/
 
 android/.gradle/
 android/build/
