@@ -1,0 +1,8 @@
+{
+  "appId": "br.com.salacontrol.app",
+  "appName": "Sala Control",
+  "webDir": "public",
+  "server": {
+    "androidScheme": "https"
+  }
+}

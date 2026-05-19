@@ -26,6 +26,34 @@ https://owagnerjrr.github.io/aplicativo/
 
 No GitHub Pages o app roda em modo demo, sem o servidor local. As cenas e os botoes funcionam visualmente, mas nao enviam comandos reais para equipamentos.
 
+## Como gerar APK de teste
+
+O projeto Android usa Capacitor. Para compilar o APK localmente, instale:
+
+- Java JDK 17 ou superior
+- Android Studio com Android SDK
+- Variavel `JAVA_HOME` apontando para o JDK
+
+Depois rode:
+
+```powershell
+npm install
+npm run android:sync
+npm run android:build
+```
+
+O APK debug sera gerado em:
+
+```txt
+android/app/build/outputs/apk/debug/app-debug.apk
+```
+
+Tambem da para abrir no Android Studio:
+
+```powershell
+npm run android:open
+```
+
 ## Como testar no celular
 
 O celular e o computador precisam estar no mesmo Wi-Fi.
