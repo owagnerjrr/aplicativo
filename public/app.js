@@ -52,107 +52,7 @@ const demoSceneNames = {
   shutdown: "Desligar tudo"
 };
 
-const discoverCatalog = [
-  {
-    name: "Projetor Epson antigo",
-    type: "Data show",
-    group: "video",
-    tech: "ir",
-    status: "Precisa de hub",
-    detail: "Liga, desliga, troca entrada e controla menu por infravermelho.",
-    connection: "hub"
-  },
-  {
-    name: "Ar-condicionado split",
-    type: "Climatizacao",
-    group: "clima",
-    tech: "ir",
-    status: "Precisa de hub",
-    detail: "Comandos de temperatura, modo, velocidade e liga/desliga.",
-    connection: "hub"
-  },
-  {
-    name: "Receiver de som",
-    type: "Audio",
-    group: "audio",
-    tech: "ir",
-    status: "Precisa de hub",
-    detail: "Volume, mute, entrada e power.",
-    connection: "hub"
-  },
-  {
-    name: "TV ou monitor smart",
-    type: "Video",
-    group: "video",
-    tech: "ip",
-    status: "Conexao direta",
-    detail: "Pode usar IP, HDMI-CEC ou infravermelho conforme o modelo.",
-    connection: "direct"
-  },
-  {
-    name: "Caixa Bluetooth",
-    type: "Audio",
-    group: "audio",
-    tech: "bluetooth",
-    status: "Pedir permissao",
-    detail: "O navegador pode exigir permissao ou app nativo.",
-    connection: "permission"
-  },
-  {
-    name: "Tela de projecao RF",
-    type: "Tela",
-    group: "tela",
-    tech: "rf",
-    status: "Precisa de hub",
-    detail: "Baixar, parar e recolher por radiofrequencia.",
-    connection: "hub"
-  },
-  {
-    name: "Modulo de luz Zigbee",
-    type: "Iluminacao",
-    group: "luz",
-    tech: "zigbee",
-    status: "Precisa de hub",
-    detail: "Liga, desliga, brilho e cenas.",
-    connection: "hub"
-  },
-  {
-    name: "Modulo Z-Wave",
-    type: "Automacao",
-    group: "luz",
-    tech: "zwave",
-    status: "Precisa de hub",
-    detail: "Reles, sensores e cargas eletricas compativeis.",
-    connection: "hub"
-  },
-  {
-    name: "Switch HDMI-CEC",
-    type: "Video",
-    group: "video",
-    tech: "cec",
-    status: "Precisa de hub",
-    detail: "Troca fonte e envia comandos pelo cabo HDMI.",
-    connection: "hub"
-  },
-  {
-    name: "Projetor profissional RS-232",
-    type: "Data show",
-    group: "video",
-    tech: "serial",
-    status: "Precisa de hub",
-    detail: "Controle confiavel por comandos seriais.",
-    connection: "hub"
-  },
-  {
-    name: "Etiqueta NFC / QR",
-    type: "Cadastro manual",
-    group: "controle",
-    tech: "nfc",
-    status: "Pedir permissao",
-    detail: "Associa um equipamento fisico ao cadastro do app.",
-    connection: "permission"
-  }
-];
+const discoveredDevices = [];
 
 const techNames = {
   ip: "Wi-Fi/IP",
@@ -503,9 +403,14 @@ function clearConnectStatus() {
   connectStatus.textContent = "";
 }
 
-function renderDiscoverResults(items = discoverCatalog) {
+function renderDiscoverResults(items = discoveredDevices) {
   if (!items.length) {
-    discoverResults.innerHTML = '<p class="device-state">Nenhum equipamento encontrado.</p>';
+    discoverResults.innerHTML = `
+      <div class="empty-state">
+        <strong>Nenhum equipamento encontrado</strong>
+        <span>Verifique se o aparelho esta ligado e na mesma rede.</span>
+      </div>
+    `;
     return;
   }
 
@@ -538,11 +443,19 @@ function showSearching() {
   `;
 }
 
-function scanDevices() {
+async function detectDevices() {
+  return [];
+}
+
+async function scanDevices() {
   const query = discoverQuery.value.trim().toLowerCase();
   const group = discoverTech.value;
+  showSearching();
 
-  const results = discoverCatalog.filter((item) => {
+  const detected = await detectDevices();
+  discoveredDevices.splice(0, discoveredDevices.length, ...detected);
+
+  const results = discoveredDevices.filter((item) => {
     const matchesGroup = group === "all" || item.group === group;
     const text = `${item.name} ${item.type}`.toLowerCase();
     return matchesGroup && (!query || text.includes(query));
@@ -564,7 +477,6 @@ function openDiscovery({ searching = true } = {}) {
   }
 
   if (searching) {
-    showSearching();
     setTimeout(scanDevices, 750);
   } else {
     renderDiscoverResults();
@@ -610,7 +522,7 @@ discoverResults.addEventListener("click", async (event) => {
   const button = event.target.closest("[data-add-device]");
   if (!button) return;
 
-  const item = discoverCatalog.find((candidate) => candidate.name === button.dataset.addDevice);
+  const item = discoveredDevices.find((candidate) => candidate.name === button.dataset.addDevice);
   if (!item) return;
   if (addedDevices.some((device) => device.name === item.name)) {
     setConnectStatus("Este equipamento ja esta conectado.", "ok");
