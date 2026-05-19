@@ -56,6 +56,7 @@ const discoverCatalog = [
   {
     name: "Projetor Epson antigo",
     type: "Data show",
+    group: "video",
     tech: "ir",
     status: "Precisa de IR no celular ou hub BroadLink/ESP32",
     detail: "Liga, desliga, troca entrada e controla menu por infravermelho."
@@ -63,6 +64,7 @@ const discoverCatalog = [
   {
     name: "Ar-condicionado split",
     type: "Climatizacao",
+    group: "clima",
     tech: "ir",
     status: "Precisa de emissor infravermelho",
     detail: "Comandos de temperatura, modo, velocidade e liga/desliga."
@@ -70,6 +72,7 @@ const discoverCatalog = [
   {
     name: "Receiver de som",
     type: "Audio",
+    group: "audio",
     tech: "ir",
     status: "Controle remoto IR ou RS-232 em modelos profissionais",
     detail: "Volume, mute, entrada e power."
@@ -77,6 +80,7 @@ const discoverCatalog = [
   {
     name: "TV ou monitor smart",
     type: "Video",
+    group: "video",
     tech: "ip",
     status: "Busca por rede local",
     detail: "Pode usar IP, HDMI-CEC ou infravermelho conforme o modelo."
@@ -84,6 +88,7 @@ const discoverCatalog = [
   {
     name: "Caixa Bluetooth",
     type: "Audio",
+    group: "audio",
     tech: "bluetooth",
     status: "Pareamento Bluetooth/BLE",
     detail: "O navegador pode exigir permissao ou app nativo."
@@ -91,6 +96,7 @@ const discoverCatalog = [
   {
     name: "Tela de projecao RF",
     type: "Tela",
+    group: "tela",
     tech: "rf",
     status: "Precisa de hub RF 315/433 MHz",
     detail: "Baixar, parar e recolher por radiofrequencia."
@@ -98,6 +104,7 @@ const discoverCatalog = [
   {
     name: "Modulo de luz Zigbee",
     type: "Iluminacao",
+    group: "luz",
     tech: "zigbee",
     status: "Precisa de coordenador Zigbee",
     detail: "Liga, desliga, brilho e cenas."
@@ -105,6 +112,7 @@ const discoverCatalog = [
   {
     name: "Modulo Z-Wave",
     type: "Automacao",
+    group: "luz",
     tech: "zwave",
     status: "Precisa de controlador Z-Wave",
     detail: "Reles, sensores e cargas eletricas compativeis."
@@ -112,6 +120,7 @@ const discoverCatalog = [
   {
     name: "Switch HDMI-CEC",
     type: "Video",
+    group: "video",
     tech: "cec",
     status: "Precisa de interface HDMI-CEC",
     detail: "Troca fonte e envia comandos pelo cabo HDMI."
@@ -119,6 +128,7 @@ const discoverCatalog = [
   {
     name: "Projetor profissional RS-232",
     type: "Data show",
+    group: "video",
     tech: "serial",
     status: "Precisa de adaptador USB/serial ou gateway IP",
     detail: "Controle confiavel por comandos seriais."
@@ -126,6 +136,7 @@ const discoverCatalog = [
   {
     name: "Etiqueta NFC / QR",
     type: "Cadastro manual",
+    group: "controle",
     tech: "nfc",
     status: "Celular pode ler NFC ou camera",
     detail: "Associa um equipamento fisico ao cadastro do app."
@@ -480,13 +491,11 @@ function renderDiscoverResults(items = discoverCatalog) {
         <article class="result-card">
           <div>
             <h3>${item.name}</h3>
-            <span class="tech-pill">${techNames[item.tech]}</span>
-            <p>${item.type} · ${item.status}</p>
-            <p>${item.detail}</p>
+            <p>${item.type}</p>
           </div>
           <div class="result-actions">
             <button type="button" data-add-device="${item.name}">
-              ${addedDevices.some((device) => device.name === item.name) ? "Adicionado" : "Adicionar"}
+              ${addedDevices.some((device) => device.name === item.name) ? "Conectado" : "Conectar"}
             </button>
           </div>
         </article>
@@ -497,12 +506,12 @@ function renderDiscoverResults(items = discoverCatalog) {
 
 function scanDevices() {
   const query = discoverQuery.value.trim().toLowerCase();
-  const tech = discoverTech.value;
+  const group = discoverTech.value;
 
   const results = discoverCatalog.filter((item) => {
-    const matchesTech = tech === "all" || item.tech === tech;
-    const text = `${item.name} ${item.type} ${item.status} ${item.detail}`.toLowerCase();
-    return matchesTech && (!query || text.includes(query));
+    const matchesGroup = group === "all" || item.group === group;
+    const text = `${item.name} ${item.type}`.toLowerCase();
+    return matchesGroup && (!query || text.includes(query));
   });
 
   renderDiscoverResults(results);
