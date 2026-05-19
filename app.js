@@ -460,6 +460,10 @@ function getBluetoothPlugin() {
   return window.Capacitor?.Plugins?.BluetoothLe || null;
 }
 
+function getNetworkDiscoveryPlugin() {
+  return window.Capacitor?.Plugins?.NetworkDiscovery || null;
+}
+
 async function detectBluetoothDevices() {
   const bluetooth = getBluetoothPlugin();
   if (!bluetooth) return [];
@@ -512,9 +516,36 @@ async function detectBluetoothDevices() {
   return [...found.values()];
 }
 
+async function detectNetworkDevices() {
+  const networkDiscovery = getNetworkDiscoveryPlugin();
+  if (!networkDiscovery) return [];
+
+  try {
+    setConnectStatus("Procurando Wi-Fi...");
+    const result = await networkDiscovery.scan();
+    return Array.isArray(result.devices) ? result.devices : [];
+  } catch (error) {
+    setConnectStatus("Nao foi possivel procurar no Wi-Fi.", "warn");
+    return [];
+  }
+}
+
 async function detectDevices() {
-  const bluetoothDevices = await detectBluetoothDevices();
-  return bluetoothDevices;
+  const detections = await Promise.allSettled([
+    detectBluetoothDevices(),
+    detectNetworkDevices()
+  ]);
+
+  const found = new Map();
+  detections.forEach((result) => {
+    if (result.status !== "fulfilled") return;
+    result.value.forEach((device) => {
+      const key = device.id || `${device.source}-${device.name}`;
+      found.set(key, device);
+    });
+  });
+
+  return [...found.values()];
 }
 
 function searchRemoteCatalog(query, group) {
@@ -594,6 +625,12 @@ async function connectDiscoveredDevice(item) {
       showToast("Bluetooth encontrado");
       return true;
     }
+  }
+
+  if (item.source === "network") {
+    setConnectStatus(`${item.name} encontrado no Wi-Fi.`, "success");
+    showToast("Wi-Fi encontrado");
+    return true;
   }
 
   if (item.connection === "hub") {
