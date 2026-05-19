@@ -12,10 +12,13 @@ import android.os.Build;
 
 import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
+import com.getcapacitor.PermissionState;
 import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
+import com.getcapacitor.annotation.Permission;
+import com.getcapacitor.annotation.PermissionCallback;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -23,10 +26,39 @@ import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
-@CapacitorPlugin(name = "ClassicBluetooth")
+@CapacitorPlugin(
+    name = "ClassicBluetooth",
+    permissions = {
+        @Permission(strings = { Manifest.permission.ACCESS_FINE_LOCATION }, alias = "ACCESS_FINE_LOCATION"),
+        @Permission(strings = { Manifest.permission.BLUETOOTH }, alias = "BLUETOOTH"),
+        @Permission(strings = { Manifest.permission.BLUETOOTH_ADMIN }, alias = "BLUETOOTH_ADMIN"),
+        @Permission(strings = { "android.permission.BLUETOOTH_SCAN" }, alias = "BLUETOOTH_SCAN"),
+        @Permission(strings = { "android.permission.BLUETOOTH_CONNECT" }, alias = "BLUETOOTH_CONNECT")
+    }
+)
 public class ClassicBluetoothPlugin extends Plugin {
+    private String[] requiredAliases = new String[] {};
+
     @PluginMethod
     public void scan(PluginCall call) {
+        requiredAliases = getRequiredAliases();
+        if (!hasAliasPermissions(requiredAliases)) {
+            requestPermissionForAliases(requiredAliases, call, "scanAfterPermission");
+            return;
+        }
+        runScan(call);
+    }
+
+    @PermissionCallback
+    private void scanAfterPermission(PluginCall call) {
+        if (!hasAliasPermissions(requiredAliases)) {
+            call.reject("Permissao Bluetooth negada.");
+            return;
+        }
+        runScan(call);
+    }
+
+    private void runScan(PluginCall call) {
         new Thread(() -> {
             try {
                 JSObject response = new JSObject();
@@ -130,5 +162,21 @@ public class ClassicBluetoothPlugin extends Plugin {
         }
         return getContext().checkSelfPermission(Manifest.permission.BLUETOOTH_SCAN) == PackageManager.PERMISSION_GRANTED
             && getContext().checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED;
+    }
+
+    private String[] getRequiredAliases() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
+            return new String[] { "ACCESS_FINE_LOCATION", "BLUETOOTH", "BLUETOOTH_ADMIN" };
+        }
+        return new String[] { "BLUETOOTH_SCAN", "BLUETOOTH_CONNECT" };
+    }
+
+    private boolean hasAliasPermissions(String[] aliases) {
+        for (String alias : aliases) {
+            if (getPermissionState(alias) != PermissionState.GRANTED) {
+                return false;
+            }
+        }
+        return true;
     }
 }

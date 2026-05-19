@@ -568,9 +568,9 @@ async function detectDevices() {
   const bluetoothReady = await prepareBluetooth();
   if (bluetoothReady) {
     addDevices(await detectBluetoothDevices());
-    addDevices(await detectClassicBluetoothDevices());
   }
 
+  addDevices(await detectClassicBluetoothDevices());
   addDevices(await detectNetworkDevices());
 
   return [...found.values()];
