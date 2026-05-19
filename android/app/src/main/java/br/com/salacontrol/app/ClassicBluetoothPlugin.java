@@ -125,7 +125,9 @@ public class ClassicBluetoothPlugin extends Plugin {
     }
 
     private boolean hasBluetoothPermission() {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return true;
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
+            return getContext().checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED;
+        }
         return getContext().checkSelfPermission(Manifest.permission.BLUETOOTH_SCAN) == PackageManager.PERMISSION_GRANTED
             && getContext().checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED;
     }

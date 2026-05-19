@@ -456,15 +456,11 @@ function getNetworkDiscoveryPlugin() {
   return window.Capacitor?.Plugins?.NetworkDiscovery || null;
 }
 
-async function detectBluetoothDevices() {
+async function prepareBluetooth() {
   const bluetooth = getBluetoothPlugin();
-  if (!bluetooth) return [];
-
-  const found = new Map();
-  let listener = null;
+  if (!bluetooth) return false;
 
   try {
-    setConnectStatus("Procurando Bluetooth...");
     await bluetooth.initialize({ androidNeverForLocation: true });
 
     if (bluetooth.checkPermissions && bluetooth.requestPermissions) {
@@ -479,6 +475,22 @@ async function detectBluetoothDevices() {
     if (enabled && enabled.value === false && bluetooth.requestEnable) {
       await bluetooth.requestEnable();
     }
+
+    return true;
+  } catch (error) {
+    return false;
+  }
+}
+
+async function detectBluetoothDevices() {
+  const bluetooth = getBluetoothPlugin();
+  if (!bluetooth) return [];
+
+  const found = new Map();
+  let listener = null;
+
+  try {
+    setConnectStatus("Procurando Bluetooth...");
 
     listener = await bluetooth.addListener("onScanResult", (result) => {
       const device = result.device || {};
@@ -544,20 +556,22 @@ async function detectNetworkDevices() {
 }
 
 async function detectDevices() {
-  const detections = await Promise.allSettled([
-    detectBluetoothDevices(),
-    detectClassicBluetoothDevices(),
-    detectNetworkDevices()
-  ]);
-
   const found = new Map();
-  detections.forEach((result) => {
-    if (result.status !== "fulfilled") return;
-    result.value.forEach((device) => {
+
+  const addDevices = (devices) => {
+    devices.forEach((device) => {
       const key = device.id || `${device.source}-${device.name}`;
       found.set(key, device);
     });
-  });
+  };
+
+  const bluetoothReady = await prepareBluetooth();
+  if (bluetoothReady) {
+    addDevices(await detectBluetoothDevices());
+    addDevices(await detectClassicBluetoothDevices());
+  }
+
+  addDevices(await detectNetworkDevices());
 
   return [...found.values()];
 }
