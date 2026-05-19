@@ -436,7 +436,7 @@ function renderDiscoverResults(items = discoveredDevices) {
             <p>${item.type}${item.source === "remote" ? " - controle compativel" : ""}</p>
           </div>
           <div class="result-actions">
-            <button type="button" data-add-device="${item.name}">
+            <button type="button" data-add-device="${item.id || item.name}">
               ${addedDevices.some((device) => device.name === item.name) ? "Conectado" : "Conectar"}
             </button>
           </div>
@@ -460,6 +460,10 @@ function getBluetoothPlugin() {
   return window.Capacitor?.Plugins?.BluetoothLe || null;
 }
 
+function getClassicBluetoothPlugin() {
+  return window.Capacitor?.Plugins?.ClassicBluetooth || null;
+}
+
 function getNetworkDiscoveryPlugin() {
   return window.Capacitor?.Plugins?.NetworkDiscovery || null;
 }
@@ -474,6 +478,14 @@ async function detectBluetoothDevices() {
   try {
     setConnectStatus("Procurando Bluetooth...");
     await bluetooth.initialize({ androidNeverForLocation: true });
+
+    if (bluetooth.checkPermissions && bluetooth.requestPermissions) {
+      const permissions = await bluetooth.checkPermissions();
+      const needsPermission = Object.values(permissions).some((value) => value !== "granted");
+      if (needsPermission) {
+        await bluetooth.requestPermissions();
+      }
+    }
 
     const enabled = await bluetooth.isEnabled();
     if (enabled && enabled.value === false && bluetooth.requestEnable) {
@@ -516,6 +528,19 @@ async function detectBluetoothDevices() {
   return [...found.values()];
 }
 
+async function detectClassicBluetoothDevices() {
+  const classicBluetooth = getClassicBluetoothPlugin();
+  if (!classicBluetooth) return [];
+
+  try {
+    setConnectStatus("Procurando Bluetooth...");
+    const result = await classicBluetooth.scan();
+    return Array.isArray(result.devices) ? result.devices : [];
+  } catch (error) {
+    return [];
+  }
+}
+
 async function detectNetworkDevices() {
   const networkDiscovery = getNetworkDiscoveryPlugin();
   if (!networkDiscovery) return [];
@@ -533,6 +558,7 @@ async function detectNetworkDevices() {
 async function detectDevices() {
   const detections = await Promise.allSettled([
     detectBluetoothDevices(),
+    detectClassicBluetoothDevices(),
     detectNetworkDevices()
   ]);
 
@@ -627,6 +653,12 @@ async function connectDiscoveredDevice(item) {
     }
   }
 
+  if (item.source === "classic-bluetooth") {
+    setConnectStatus(`${item.name} encontrado por Bluetooth.`, "success");
+    showToast("Bluetooth encontrado");
+    return true;
+  }
+
   if (item.source === "network") {
     setConnectStatus(`${item.name} encontrado no Wi-Fi.`, "success");
     showToast("Wi-Fi encontrado");
@@ -652,7 +684,7 @@ discoverResults.addEventListener("click", async (event) => {
   const button = event.target.closest("[data-add-device]");
   if (!button) return;
 
-  const item = [...discoveredDevices, ...remoteCatalog].find((candidate) => candidate.name === button.dataset.addDevice);
+  const item = [...discoveredDevices, ...remoteCatalog].find((candidate) => (candidate.id || candidate.name) === button.dataset.addDevice);
   if (!item) return;
   if (addedDevices.some((device) => device.name === item.name)) {
     setConnectStatus("Este equipamento ja esta conectado.", "ok");
