@@ -92,6 +92,7 @@ const controlProfiles = {
 
 const formatPower = (value) => (value ? "Ligado" : "Desligado");
 const clone = (value) => JSON.parse(JSON.stringify(value));
+const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 function loadAddedDevices() {
   try {
@@ -455,8 +456,65 @@ function showSearching() {
   `;
 }
 
+function getBluetoothPlugin() {
+  return window.Capacitor?.Plugins?.BluetoothLe || null;
+}
+
+async function detectBluetoothDevices() {
+  const bluetooth = getBluetoothPlugin();
+  if (!bluetooth) return [];
+
+  const found = new Map();
+  let listener = null;
+
+  try {
+    setConnectStatus("Procurando Bluetooth...");
+    await bluetooth.initialize({ androidNeverForLocation: true });
+
+    const enabled = await bluetooth.isEnabled();
+    if (enabled && enabled.value === false && bluetooth.requestEnable) {
+      await bluetooth.requestEnable();
+    }
+
+    listener = await bluetooth.addListener("onScanResult", (result) => {
+      const device = result.device || {};
+      const id = device.deviceId;
+      if (!id) return;
+
+      const label = result.localName || device.name || `Dispositivo Bluetooth ${id.slice(-4)}`;
+      found.set(id, {
+        id,
+        name: label,
+        type: "Bluetooth",
+        group: "controle",
+        tech: "bluetooth",
+        status: "Bluetooth encontrado",
+        detail: "Dispositivo encontrado por Bluetooth.",
+        connection: "direct",
+        source: "bluetooth"
+      });
+    });
+
+    await bluetooth.requestLEScan({ allowDuplicates: false });
+    await wait(5000);
+    await bluetooth.stopLEScan();
+  } catch (error) {
+    setConnectStatus("Nao foi possivel procurar por Bluetooth.", "warn");
+  } finally {
+    try {
+      await bluetooth.stopLEScan?.();
+    } catch {}
+    try {
+      await listener?.remove?.();
+    } catch {}
+  }
+
+  return [...found.values()];
+}
+
 async function detectDevices() {
-  return [];
+  const bluetoothDevices = await detectBluetoothDevices();
+  return bluetoothDevices;
 }
 
 function searchRemoteCatalog(query, group) {
@@ -526,6 +584,17 @@ discoverTech.addEventListener("change", () => {
 async function connectDiscoveredDevice(item) {
   setConnectStatus(`Conectando ${item.name}...`);
   await new Promise((resolve) => setTimeout(resolve, 650));
+
+  if (item.source === "bluetooth") {
+    const bluetooth = getBluetoothPlugin();
+    try {
+      await bluetooth?.connect?.({ deviceId: item.id });
+    } catch {
+      setConnectStatus("Encontrado. Nao foi possivel conectar agora.", "warn");
+      showToast("Bluetooth encontrado");
+      return true;
+    }
+  }
 
   if (item.connection === "hub") {
     setConnectStatus("Este controle precisa de infravermelho no celular ou hub.", "warn");
