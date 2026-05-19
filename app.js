@@ -53,6 +53,18 @@ const demoSceneNames = {
 };
 
 const discoveredDevices = [];
+const remoteCatalog = [
+  {
+    name: "Controle Hitachi",
+    type: "Ar condicionado",
+    group: "clima",
+    tech: "ir",
+    status: "Controle infravermelho",
+    detail: "Use o infravermelho do celular ou um hub compativel.",
+    connection: "hub",
+    source: "remote"
+  }
+];
 
 const techNames = {
   ip: "Wi-Fi/IP",
@@ -408,7 +420,7 @@ function renderDiscoverResults(items = discoveredDevices) {
     discoverResults.innerHTML = `
       <div class="empty-state">
         <strong>Nenhum equipamento encontrado</strong>
-        <span>Verifique se o aparelho esta ligado e na mesma rede.</span>
+        <span>Pesquise pela marca para procurar controles compativeis.</span>
       </div>
     `;
     return;
@@ -420,7 +432,7 @@ function renderDiscoverResults(items = discoveredDevices) {
         <article class="result-card">
           <div>
             <h3>${item.name}</h3>
-            <p>${item.type}</p>
+            <p>${item.type}${item.source === "remote" ? " - controle compativel" : ""}</p>
           </div>
           <div class="result-actions">
             <button type="button" data-add-device="${item.name}">
@@ -447,6 +459,16 @@ async function detectDevices() {
   return [];
 }
 
+function searchRemoteCatalog(query, group) {
+  if (!query) return [];
+
+  return remoteCatalog.filter((item) => {
+    const matchesGroup = group === "all" || item.group === group;
+    const text = `${item.name} ${item.type} ${item.detail}`.toLowerCase();
+    return matchesGroup && text.includes(query);
+  });
+}
+
 async function scanDevices() {
   const query = discoverQuery.value.trim().toLowerCase();
   const group = discoverTech.value;
@@ -455,11 +477,13 @@ async function scanDevices() {
   const detected = await detectDevices();
   discoveredDevices.splice(0, discoveredDevices.length, ...detected);
 
-  const results = discoveredDevices.filter((item) => {
+  const foundDevices = discoveredDevices.filter((item) => {
     const matchesGroup = group === "all" || item.group === group;
     const text = `${item.name} ${item.type}`.toLowerCase();
     return matchesGroup && (!query || text.includes(query));
   });
+  const compatibleRemotes = searchRemoteCatalog(query, group);
+  const results = [...foundDevices, ...compatibleRemotes];
 
   renderDiscoverResults(results);
   showToast("Busca concluida");
@@ -504,7 +528,7 @@ async function connectDiscoveredDevice(item) {
   await new Promise((resolve) => setTimeout(resolve, 650));
 
   if (item.connection === "hub") {
-    setConnectStatus("Este aparelho precisa de um hub para conectar.", "warn");
+    setConnectStatus("Este controle precisa de infravermelho no celular ou hub.", "warn");
     showToast("Precisa de hub");
     return false;
   }
@@ -522,7 +546,7 @@ discoverResults.addEventListener("click", async (event) => {
   const button = event.target.closest("[data-add-device]");
   if (!button) return;
 
-  const item = discoveredDevices.find((candidate) => candidate.name === button.dataset.addDevice);
+  const item = [...discoveredDevices, ...remoteCatalog].find((candidate) => candidate.name === button.dataset.addDevice);
   if (!item) return;
   if (addedDevices.some((device) => device.name === item.name)) {
     setConnectStatus("Este equipamento ja esta conectado.", "ok");
